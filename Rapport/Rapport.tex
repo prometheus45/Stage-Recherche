@@ -1,0 +1,350 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc} % un package
+\usepackage[T1]{fontenc}      % un second package
+\usepackage[francais]{babel}  % un troisième package
+
+\usepackage{doi,fullpage,amsmath,charter}
+\usepackage{color}
+\usepackage{listings}
+\usepackage{latexsym}
+\usepackage{graphicx}
+
+\title{Préparation au stage recherche \\ Formalisation en TLA+ de programmes parallèles avec\\ modèles mémoire faibles}
+\author{Joris RUBAGOTTI}
+\date{Avril 2015}
+\begin{document}
+\maketitle
+
+\section{Présentation du sujet de stage}
+
+\subsection{Présentation grand public}
+
+De nombreuses optimisations reposaient sur le fait que les processeurs possédaient un seul cœur et n'étaient pas observable par les utilisateurs. Aujourd'hui, la majorité des processeurs possèdent au moins deux cœurs. L'utilisateur de la machine peut observer les optimisations et agir sur celles-ci si celui-ci programme de manière à exploité tous les cœurs ensembles. Mais cette évolution de nos machines apporte une plus grande difficulté à comprendre le fonctionnement de nos processeurs, particulièrement le comportement de la mémoire.
+
+Pour définir le comportement de la mémoire, on a recourt aux modèles mémoire. Un modèle mémoire intuitif utilisé dans la programmation parallèle est la consistance séquentielle. On imagine deux programmes que l'ont souhaite exécuté en parallèle. Chaque programmes est une suite d'instruction. L'exécution en parallèle de ces programmes consiste à entrelacer les instruction de ces deux programmes lors de l'exécution si l'exécution utilise un modèle mémoire séquentiellement consistant. Afin de mieux comprendre ce type de comportement, un exemple est préférable. Prenons deux variables x et y ayant pour valeur initial 0 et deux registres du processeur $r_i$ avec i étant le numéro de cœurs auxquels appartient le registre ainsi que le programme suivant et les résultats pouvant être obtenu avec un modèle mémoire séquentiellement consistant :
+\clearpage
+\[
+\begin{array}{c||c}
+  \begin{array}{l}
+    \textcolor[rgb]{0,0,1}{\text{C\oe{}ur 1}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{x = 1;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{r_0 = y;}} \\
+  \end{array} &
+  \begin{array}{l}
+    \textcolor[rgb]{1,0,0}{\text{C\oe{}ur 2}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{y = 1;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{r_1 = x;}} \\
+  \end{array}
+\end{array}
+\]
+\[
+\begin{array}{c||c||c}
+  \begin{array}{l}
+    \text{Resultat 1} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{x = 1;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{r_0 = y;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{y = 1;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{r_1 = x;}} \\
+    \mathtt{r_0 = 0, r_1 = 1;} \\
+  \end{array} &
+  \begin{array}{l}
+    \text{Resultat 2} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{y = 1;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{r_1 = x;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{x = 1;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{r_0 = y;}} \\
+    \mathtt{r_0 = 1, r_1 = 0;} \\
+  \end{array} &
+    \begin{array}{l}
+    \text{Resultat 3} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{x = 1;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{y = 1;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{r_0 = y;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{r_1 = x;}} \\
+    \mathtt{r_0 = 1, r_1 = 1;} \\
+  \end{array} 
+\end{array}
+\]
+
+Sur la plupart des processeurs actuels, on peut observer un autre résultat $r_0 = 0$ et $r_1 = 0$. En effet, ce résultat peut être obtenu en considérant les cœurs du processeur indépendamment car on observe aucune dépendance dans les instruction de chaque cœurs donc une inversion des instructions est possible pour chaque cœurs. Il y a dépendance si dans un cœur, on a comme exemple, une affectation ($x = 1;$) suivi de l'enregistrement de la valeur cette même variable dans un registre ($r_i = x$). Ce type de comportement nécessite de travailler avec d'autre modèle mémoire possédant moins de contrainte que la consistance séquentielle gérant ce type de problème. On les appelle modèle mémoire faibles \cite{Adve:1996:SMC:619013.620590}. 
+
+Le modèles mémoire faible possède une propriété fondamentale. Si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, c'est à dire deux accès concurrent  à la même adresse mémoire dont l'une est une écriture (exemple : $x = 1;$ est une écriture), alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), c'est à dire une exécution sans data race, qui permettent d'assurer le comportement séquentiellement consistant de programme. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisé.
+
+C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai utilisé le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé afin de formalisé un ou plusieurs modèle mémoire faible puis utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible. 
+  
+\subsection{Présentation Master Informatique}
+
+De nombreuses optimisations reposaient sur le fait que les processeurs possédaient un seul cœur et n'étaient pas observable par les utilisateurs.
+Aujourd'hui, les processeurs multi-cœurs et la programmation parallèle est courant. Ces optimisations deviennent visible pour l'utilisateur, et rendent la sémantique des processeurs complexes, particulièrement sur le comportement de la mémoire.
+
+Un modèle mémoire intuitif utilisé dans la programmation parallèle est la consistance séquentielle. Les exécutions de deux programmes mis en parallèle sont les entrelacements des exécutions des deux programmes considérés séparément. Par exemple, on a deux variables x et y ayant pour valeur initial 0 et deux registres du processeur $r_i$ ainsi que le programme suivant :
+\[
+\begin{array}{c||c}
+  \begin{array}{l}
+    \textcolor[rgb]{0,0,1}{\text{C\oe{}ur 1}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{x = 1;}} \\
+    \textcolor[rgb]{0,0,1}{\mathtt{r_0 = y;}} \\
+  \end{array} &
+  \begin{array}{l}
+    \textcolor[rgb]{1,0,0}{\text{C\oe{}ur 2}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{y = 1;}} \\
+    \textcolor[rgb]{1,0,0}{\mathtt{r_1 = x;}} \\
+  \end{array}
+\end{array}
+\]
+Cela ne peut donner que les résultats suivants avec un modèle mémoire séquentiellement consistant :
+\begin{itemize}
+	\item $r_0 = 0$ et $r_1 = 1$
+	\item $r_0 = 1$ et $r_1 = 0$
+	\item $r_0 = 1$ et $r_1 = 1$
+\end{itemize} 
+Sur la plupart des processeurs actuels, on peut observer aussi le résultat $r_0 = 0$ et $r_1 = 0$. En effet, ce résultat peut être obtenu en considérant les cœurs du processeur indépendamment car on observe aucune dépendance dans les instruction de chaque cœurs donc une inversion des instructions est possible pour chaque cœurs. Ce type de comportement nécessite l'utilisation de modèle mémoire moins de contraint que la consistance séquentielle. On les appelle modèle mémoire faibles \cite{Adve:1996:SMC:619013.620590}. 
+
+Le modèles mémoire faible possède une propriété fondamentale. Si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, c'est à dire deux accès concurrent  à la même adresse mémoire dont l'une est une écriture, alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisé.
+
+C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai utilisé le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé afin de formalisé un ou plusieurs modèle mémoire faible puis utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible. 
+
+\subsection{Présentation chercheur}
+De nombreuses optimisations reposaient sur le fait que les processeurs possédaient un seul cœur et n'étaient pas observable par les utilisateurs.
+Aujourd'hui, les processeurs multi-cœurs et la programmation parallèle est courant. Ces optimisations deviennent visible pour l'utilisateur, et rendent la sémantique des processeurs complexes, particulièrement sur le comportement de la mémoire.
+
+Un modèle mémoire intuitif utilisé dans la programmation parallèle est la consistance séquentielle. Les exécutions de deux programmes mis en parallèle sont les entrelacements des exécutions des deux programmes considérés séparément.
+ 
+Ce modèle mémoire n'est pas suffisant pour expliquer le comportement des processeurs actuel. En effet, des résultats ne pouvant pas apparaitre dans le contexte de consistance séquentielle sont présent. Pour comprendre ce type de comportement, il est nécessaire d'utiliser des modèles mémoire faible\cite{Adve:1996:SMC:619013.620590} moins contraignant. 
+
+Une propriété fondamentale des modèle mémoire faible consiste en si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisé.
+
+C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai utilisé le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé afin de formalisé un ou plusieurs modèle mémoire faible puis utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible.
+ 
+\footnotetext[1]{Laboratoire d'Informatique Fondamentale d'Orléans} 
+
+\section{Les modèles mémoire faibles}
+
+\subsection{Contexte}
+
+Avant d'expliquer un peu plus en détail les modèles mémoire faible, il est nécessaire de comprendre pourquoi est-il nécessaire d'y avoir recourt. Avant le développement des processeurs ayant plusieurs cœurs, les concepteurs de micro-processeurs chercher à obtenir le plus de performance possible avec les processeurs avec un seul cœur. Pour ce faire, il cherchait principalement à en augmenter la fréquence et à optimiser les exécutions des instructions au sein d'un cœur pouvant ressembler à du parallélisme. Mais aujourd'hui, il devient très difficile de croitre la fréquence d'un cœur pour diverse raison comme la dissipation thermique. Pour compenser cela, les concepteurs de processeurs ont se mis à multiplier le nombre de cœurs sur les processeurs afin de pouvoir exécuté des morceau d'un programme en simultanément.
+
+Cette nouvelle forme d'architecture pose des problèmes d'adaptation. En effet, malgré de nombreuses études théoriques, la parallélisation reste complexe. Plusieurs causes de cette difficulté existent :
+\begin{itemize}
+	\item Les algorithmes ne sont pas tous adapté au contexte parallèle
+	\item Les optimisations mono cœur cité plus haut sont la source de conflit avec le parallélisme obtenu avec plusieurs cœurs. 
+\end{itemize}
+L'étude de ces problèmes et de leur résolution à donner naissance aux modèles mémoire faible.
+
+Un modèle mémoire ressemble au méthode de description d'un langage de programmation par les chercheurs en programmation d'un point de vu sémantique, c'est à dire les résultats que l'on peut obtenir avec des bout de code du langage. Un modèle mémoire intuitif dans le contexte du parallélisme est la consistance séquentielle. Ce modèle mémoire est énoncé par Leslie Lamport en 1979 pour poser les bases se la programmation parallèle. Ce modèle défini que toute exécution du programme multi-threadé se faisait toujours en exécutant les instructions de chaque thread une par une dans l'ordre du programme. Le modèle  consistance séquentielle est modèle très appliquer les développer principalement. Quand celui-ci développe son programme sur plusieurs cœurs, il a tendance à suivre ce modèle. Les modèles mémoire des processeurs actuels sont plus faible que le modèle de consistance séquentielle, comme ceux-ci apporte moins de garanties. En effet, toute séquence d'exécution valide dans le modèle séquentiel est également valide dans un modèle plus faible.
+
+Une autre raison de l'utilisation des modèles mémoire faibles est la recherche de meilleur performance. En effet, afin d'éviter les data race dans les programmes, des locks sont utilisés pour construire des sections sûr lors de l'exécution. Data race est le nom donné à un accès concurrent, sur même zone mémoire, par deux cœurs différents dont l'un de ces accès est une écriture. Le problème de l'utilisation de ces locks, l'exécution n'est plus parallèle durant cette section d'où une perte de performance. L'utilisation des modèles mémoire faibles permettent de vérifier la validité des résultats de certains programmes ayant des data race mais respectant le modèle de la consistance séquentielle donc l'absence d'utilisation de locks dans ces cas permettent un gain de performance.  
+
+\subsection{Introduction au modèle mémoire des processeurs x86}
+ 
+Dans cette partie, on introduit un modèle mémoire faible x86-TSO utilisé pour les processeurs x86. Pour la spécification de ce modèle, on reprend la spécification proposée dans l'article \cite{Sewell:2010:XRU:1785414.1785443}. Cette spécification est née de la recherche de compréhension des processeur x86 sur les architecture parallèle. En effet, la documentation fournit par Intel propose que des proses informelles sur le sujet. L'analyse de ces proses ont montrer des erreurs ou certains manques lors de test de validité du modèle (nommé aussi litmus tests). Afin de remédier à ces manques, le modèle mémoire x86-TSO est proposé. Il est définit mathématiquement en deux styles :
+\begin{itemize}
+	\item Une machine abstraite avec des buffers de stockages explicite.
+	\item Un modèle axiomatique qui définit la validité des exécutions selon l'ordre dans la mémoire. 
+\end{itemize}
+La machine abstraite transmet l'idée au niveau du programmer derrière le x86-TSO. Le modèle axiomatique apporte un raisonnement par contrainte sur les exemples de programmes tests que l'on verra un peu plus loin. Il est important de signaler les instructions atomiques proposé par l'architecture x86 : l'une peu ajouter un LOCK prefix sur plusieurs instructions lecture-modification-écritures (ADD, INC, etc.), et l'instruction XCHG est implicitement LOCK'd. Il y a trois barrière pour la mémoire : MFENCE, SFENCE et LFENCE.
+
+\subsubsection*{Machine abstraite}
+
+\begin{figure}[ht]
+	\begin{center}
+		\includegraphics[scale=0.8]{mach_abst.png}
+		\caption{x86-TSO : machine abstraite}	
+	\end{center}
+\end{figure}
+
+Pour comprendre le fonctionnement de la machine abstraite, plusieurs informations sont nécessaire. Le comportement du stockage suit les points suivants :
+\begin{itemize}
+	\item Le buffer de stockage est une FIFO (First In First Out) et un thread en lecture doit lire l'écriture la plus récente du buffer, if il y en a une, à cette adresse; autrement les lectures se font au niveau de la mémoire partagé.
+	\item L'instruction MFENCE vide le buffer de stockage du thread.
+	\item Pour exécuter une instruction LOCK'd, un thread doit obtenir le lock global dans un premier temps. A la din de l'instruction, il vide le buffer de stockage et libère le lock. Tant qu'un lock est tenu par un thread, les autres threads ne peuvent pas lire. 
+\end{itemize}
+Si on veux être plus précis, les possibles intéraction entre les threads et le sous-système de stockage sont décrit par les évènements suivants :
+
+\begin{itemize}
+	\item $W_p[a]=u$, pour une valeur écrit $u$ à l'adresse $a$ par le thread $p$	
+	\item $R_p[a]=u$, pour une valeur lu $u$ à l'adresse $a$ par le thread $p$
+	\item $F_p$ , pour une barrière de mémoire MFENCE par le thread $p$
+	\item $L_p$ , au début de l'instruction LOCK'd par le thread $p$
+	\item $U_p$ , à la fin de l'instruction LOCK'd par le thread $p$
+	\item $\tau_p$ , pour une action interne du sous-système de stockage, propage l'écriture du buffer de stocka de $p$ vers la mémoire partagée.
+\end{itemize}
+
+Par exemple, le thread $p$ exécute l'instruction INC[56] (ajoute 1 a la valeur à l adresse 56), et le buffer de stockage de $p$ contient une seule écriture à l'adresse 65 de valeur 0. Pour une seule exécution, on a des évènement de lecture et d'écriture, $R_p[56] = 0$ et $W_p[56] = 1$, suivie de 2 évènements $\tau_p$ pour propager les deux écritures vers la mémoire partagé.
+Ensuite on donne la spécification du comportement du sous-système de stockage avec les règles suivantes :
+\begin{enumerate}
+	\item $R_p[a] = u$ : $p$ peut lire $u$ de la mémoire à l'adresse $a$ si $p$ n'est pas bloqué, si aucune écriture de $a$ soit présente dans le buffer de $p$ et la mémoire contient déjà $v$ à l'adresse $a$
+	\item $R_p[a] = u$ : $p$ peut lire $u$ du buffer de l'adresse $a$ if $p$ n'est pas bloqué et a $u$ comme une nouvelle écriture vers $a$ dans son buffer.
+	\item $W_p[a] = u$ : $p$ peut écrire $u$ dans son buffer pour l'adresse $a$ quand il le souhaite.
+	\item $\tau_p$ : if $p$ n'est pas bloqué, il peut sortir la plus vielle valeur d'écriture de son buffer et placer la valeur en mémoire à l'adresse donnée, sans coordination avec les autres cœurs.
+	\item $F_p$ : si le buffer de $p$ est vide, il peut alors exécuter MFENCE.
+	\item $L_p$ : si lock n'est pas en attente, l'instruction LOCK'd peut commencer.
+	\item $U_p$ : si $p$ a le lock, et son buffer est vide, il peut mettre fin à l'instruction LOCK'd.
+\end{enumerate}
+
+Voilà pour les règles pour cette spécification. Maintenant il est intéressant de voir si c'est spécification réussi quelques tests.
+
+\subsubsection*{Litmus tests}
+
+Il s'agit de tests utilisés afin de valider le modèle mémoire x86-TSO. Ces tests viennent de la documentation d'Intel sur leur processeur.
+
+\paragraph{EXEMPLE 1 : STORES ARE NOT REORDERED WITH OTHER STORES.}
+
+	\begin{center}
+		\includegraphics[scale=0.9]{exemple1.png}
+	\end{center}
+
+Ce test implique que les écritures par le Proc 0 sont vu dans l'ordre par les lectures du Proc 1 qui s exécute aussi dans l'ordre. x86-TSO interdit l'état final parce que le buffer de Proc 0 est une FIFO et Proc 0 communique avec Proc 1 via seulement la mémoire partagé.
+
+\paragraph{EXEMPLE 2 : STORES ARE NOT REORDERED WITH OLDER LOADS.}
+  
+	\begin{center}
+		\includegraphics[scale=0.9]{exemple2.png}
+    \end{center}
+
+x86-TSO interdit l'état final parce que la lecture n'est jamais retardé.
+Beaucoup d'autre tests sont possibles pour vérifier la cohérence du modèle mais ils seraient trop long dans abordé plus dans ce document. Cette spécification n'est pas codé à l'heure actuel. Mais le projet de ce stage est de formalisé en TLA+ la spécification précédente et d'effectuer des tests plus précis sur le modèle.
+
+\section{Le langage TLA+}
+
+\subsection{Introduction au langage}
+
+TLA+ est un langage de spécification et de preuve basé sur la logique temporelle. En utilisant la logique du premier ordre et la théorie des ensembles, on décrit un ensemble d'états et les possible transitions entre ces états. Les systèmes sont spécifiés en TLA+ comme formules Temporal Logic
+of Actions TLA, une variante de la logique temporelle linéaire introduit par Lamport.
+
+Pour mieux comprendre le langage, commençons par construire un premier système. Prenons en exemple une horloge digital qui affiche seulement les heures nommé HourClock. Le comportement d'une horloge est la séquence d'états, où $[hr = 11]$ est un état dans lequel $ hr $ est de valeur 11.
+$$ [hr = 11] \rightarrow [hr = 12] \rightarrow [hr = 1] \rightarrow [hr = 2] \rightarrow ...$$
+Une paire successive d'états, tel que $[hr = 1] \rightarrow [hr = 2]$, est nommé un pas.
+Pour spécifier l'horloge, on décrit tous les comportements possibles. Dans notre cas, il faut un prédicat initial pour spécifier les choix possibles de valeur pour $hr$ et la relation pas suivant qui spécifie comment la valeur $hr$ peut changer à chaque pas.
+Le prédicat initial est nommé $HCini$ et ce prédicat affirme que la valeur initial de $hr$ est compris entre 1 et 12. On obtient la définition suivante :
+
+$$ HCini == hr \in \{1,...,12\}$$
+
+Le symbole "==" signifie est définie comme égale à ... 
+La relation de transition entre les pas $HCnxt$ est une formule exprimant la relation entre la valeur $hr$ dans l'ancien état et $hr'$ ($'$ prononcé prime) dans le nouveau état. On défini $HCnxt$ en utilisant if/then/else construction avec la relation suivante :   
+
+$$ HCext == hr' = \text{if } hr \neq 12 \text{ then } hr + 1 \text{ else } 1 $$
+
+Le type de formule utilisant la notation prime $'$ est nommé action. Un pas satisfait l'action $HCnext$ est appelé un $HCnxt$ pas.
+Pour finir on souhaite que notre spécification corresponde un une seule formule et non une paire de formule. La formule doit affirmer que le comportement suivant :
+\begin{enumerate}
+	\item L'état initial satisfait $HCini$
+	\item Chaque pas satisfait $HCnxt$
+\end{enumerate}
+Pour le premier cas, on l'exprime comme la formule $HCini$. Pour le deuxième cas, on utilise un opérateur de logique temporelle $\Box$ (prononcé box). La formule temporelle $\Box F$ affirme que la formule est toujours vrai. On ajoute à la spécification que la valeur $hr$ peut resté identique entre deux pas avec la notation $\Box [HCnxt]_{hr}$ pouvant être noté $\Box (HCnxt \lor (hr' = hr ))$. Donc on obtient comme formule, notée $HC$, suivante :
+
+$$ HC == HCini  \land  \Box [HCnxt]_{hr} $$
+
+Pour obtenir la spécification en TLA+, on doit écrire la spécification en ASCII. La conversion de certain symbole se font de la manière suivante :
+
+\begin{itemize}
+	\item $\in$ se traduit par $\backslash in$
+	\item $\Box$ par []
+	\item $\neq$ par \#
+	\item $\land$ et $\lor$ par $/ \backslash$ $\backslash /$ 
+\end{itemize}
+
+On obtient donc la spécification en TLA+ suivante
+
+\begin{figure}[ht]
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize]
+----------------------------- MODULE HourClock ----------------------------
+EXTENDS Naturals
+VARIABLE hr
+---------------------------------------------------------------------------
+HCini == hr \in (1 .. 12)
+HCnxt == hr' = IF hr # 12 THEN hr + 1 ELSE 1
+HC == HCini /\ [][HCnxt]_hr
+---------------------------------------------------------------------------
+THEOREM HC => []HCini
+===========================================================================
+
+\end{lstlisting}
+\caption{La spécification de HourClock ASCII versions}
+\end{figure}
+
+les lignes -------- sont purement esthétiques. Ils servent à séparé les différentes déclarations selon leurs significations. En première ligne, on a le nom du module précédé du mot clef MODULE.
+Ensuite on a une phase "d'initialisation" où on déclare les variables de notre spécification avec le mot clef VARIABLE suivi des noms de ceux-ci. Pour pouvoir employer des opérateurs usuelles de mathématique, il est nécessaire de les importés. Dans notre spécification, on utilise des opérateurs d'entier donc on importe avec le mot clef EXTENDS le module Naturals.
+Dans la partie suivante, on ajoute nos différents prédicats que l'on a défini précédemment.
+En dernière partie, on a la déclaration suivante :
+$$ \text{THEOREM } HC \Rightarrow \Box HCini$$
+Il s'agit de la déclaration des théorèmes. Elle affirme que la formule $HC \Rightarrow \Box HCini$ est vrai dans le contexte de la déclaration. Plus précisément il affirme que la formule suit logiquement les définitions du module, les définitions dans le module Naturals et les règles de TLA+. Si la formule était fausse , alors le module serait incorrecte.
+Voilà un premier module TLA+. Il ne s'agit pas de la seule spécification d'une horloge avec seulement la gestion des heures possible. D'autres spécification sont possibles tel que l'utilisation du modulo pour réaliser la relation $HCnxt$ :
+
+$$ HCnxt2 == hr' = (hr \% 12) + 1 $$
+Le symbole $ \% $ correspond à l'opérateur modulo dans le module Naturals. 
+
+\subsection{An Asynchronous Interface : un autre exemple}
+
+On formalise maintenant l'interface pour transmettre des donnée entre des appareils asynchrones.
+
+\begin{figure}[ht]
+	\begin{center}
+		\includegraphics[scale=0.7]{schema_async.png}
+		\caption{Schéma du système}	
+	\end{center}
+\end{figure}
+
+La donnée est envoyé via la variable $val$ et les variables $rdy$ et $ack$ sont utilisé pour la synchronisation.
+
+\begin{figure}[ht]
+	\begin{center}
+		\includegraphics[scale=0.7]{exemple_async.png}
+		\caption{Exemple d'exécution}	
+	\end{center}
+\end{figure}
+
+Il faut bien comprendre qu'une spécification est une abstraction. Elle décrit la plupart des aspects d'un système et en ignore d'autres.Par exemple, dans la spécification présente,  on ignore un facteur temps présent entre les transitions. Dans notre contexte, on considère les transitions entre les états instantanées.
+
+C'est en prenons en compte l'idée précédente que l'on obtient la spécification TLA+ suivante :
+
+\begin{figure}[ht]
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize]
+---------------------- MODULE AsynchInterface -----------------------------
+EXTENDS Naturals
+CONSTANT Data
+VARIABLE chan
+TypeInvariant == chan \in [val:Data, rdy:{0,1}, ack:{0,1}]
+---------------------------------------------------------------------------
+Init == /\ TypeInvariant
+        /\ chan.ack = chan.rdy
+        
+Send(d) == /\ chan.rdy = chan.ack
+           /\ chan' = [chan EXCEPT !.val = d, !.rdy = 1 -@]
+           
+Rcv == /\ chan.rdy # chan.ack
+       /\ chan' = [chan EXCEPT !.ack = 1 - @]
+
+Next == (\E d \in Data : Send(d)) \/ Rcv
+Spec == Init /\ [][Next]_chan
+---------------------------------------------------------------------------
+THEOREM Spec => []TypeInvariant       
+
+===========================================================================
+\end{lstlisting}
+\caption{La spécification de AsynchInterface ASCII versions}
+\end{figure}
+
+Cette spécification introduit de nouveau outil disponible avec le langage TLA+. Dans la première partie, on utilise EXTENDS pour les opérateurs des nombres naturels. Ensuite on introduit le mot clef CONSTANT. CONSTANT introduit un nom symbolique. $Data$ est un paramètre de la spécification.
+Ensuite on déclare la variable $chan$. Une dernière déclaration est TypeInvariant qui est un prédicat indiquant quelles valeurs peuvent être utilisé selon le comportement qui satisfont la spécification. DAns ce cas si, chan est un objet record pour TLA+ se traduisant par un tuple en mathématique. le champ $val$ peut prendre n'importe quelles valeurs données par le paramètre $Data$. Les champs $val$ et $rdy$ peuvent égales à 1 ou 0 seulement.
+
+Dans la seconde partie du module, on a les différents prédicats. L'état initial $Init$ donne les condition de l'état initial, c'est à dire le respect du prédicat $typeInvariant$ et de l'égalité entre le champ $ack$ et $rdy$ de $chan$. $Send(d)$ peut prendre en paramètre une valeur noté $d$ respectant $Data$. Le prédicat est vrai si $ack$ et $rdy$ de $chan$ sont égaux. Pour le pas suivant, on a une transition entre état avec $chan'$. $chan'$ prend les mêmes valeurs que $chan$ excepté (EXCEPT) du champs $val$ prenant la valeur $d$ et le champs $rdy$ qui prend la valeur $1 - chan.rdy$ avec $chan.rdy$ symbolisé par @.
+Ensuite en à le prédicat $Rcv$ testant si $ack$ et $rdy$ sont bien différents et effectue une transition de la valeur $chan$.
+Le prédicat $Next$ est vérifie $Send(d)$ ou $Rcv$ en testant si $d$ est une valeur dans Data. Pour finir on a la spécification avec le prédicat $Spec$ vérifiant si Init est vrai et que $Next$ soit toujours vrai ou si $chan$ reste inchangé.
+
+En dernière partie, on ale théorème affirmant que le prédicat $TypeInvariant$ est toujours vrai dans cette spécification.
+
+Le langage TLA+ possède bien plus de fonctionnalité que cité précédemment. En effet, les exemples précédents sont des spécifications de système simple. Pour le stage, il faudra formaliser des modèles mémoire faibles ayant une plus grande complexité.  
+
+TLA+ possède aussi d'autres outils permettant divers vérifications d'une spécification. Pour le moment n'ayant pas exploité ces outils mais leur utilisation est nécessaire pour la réussite du stage, il m'est difficile d'expliquer totalement leur fonctionnant. Un premier outil est nommé TLC model checker. Un autre outils pouvant être utilise au sujet est TLA proof system. il permet d'écrire des preuves structurées hiérarchiquement et via un gestionnaire de preuve permettant de vérifier ces preuves.  
+
+\section{Conclusion}
+
+\bibliographystyle{ieeetr}
+\bibliography{biblio}
+\nocite{Alglave:2009:SPA:1481839.1481842, Owens:2010:RIC:1883978.1884011, PETRI, Saraswat:2007:TMM:1229428.1229469, Sewell:2010:XRU:1785414.1785443, Turon:2014:GNW:2714064.2660243, Boehm:2011:YDK:2076796.2088916}
+\end{document}
