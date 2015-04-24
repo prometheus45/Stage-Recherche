@@ -9,6 +9,8 @@
 \usepackage{listings}
 \usepackage{latexsym}
 \usepackage{graphicx}
+\usepackage{pgf, tikz}
+\usepackage{mathtools}
 
 \title{Préparation au stage recherche \\ Formalisation en TLA+ de programmes parallèles avec\\ modèles mémoire faibles}
 \author{Joris RUBAGOTTI}
@@ -70,7 +72,7 @@ Pour définir le comportement de la mémoire, on a recours aux modèles mémoire
 Sur la plupart des processeurs actuels, on peut observer un autre résultat possible : $r_0 = 0$ et $r_1 = 0$. En effet, ce résultat peut être obtenu en considérant les cœurs du processeur indépendamment car on observe aucune dépendance dans les instructions de chaque cœurs donc une inversion des instructions est possible pour chaque cœurs cherchant à optimiser leur exécution. Il y a dépendance si dans un cœur, on a comme exemple, une affectation ($x = 1;$) suivi de l'enregistrement de la valeur de cette même variable dans un registre ($r_i = x$). Ce type de comportement nécessite de travailler avec d'autre modèle mémoire possédant moins contraints que la consistance séquentielle. On les appelle modèle mémoire faibles \cite{Adve:1996:SMC:619013.620590}. 
 
 Un modèle mémoire faible possède une propriété fondamentale : si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, c'est à dire deux accès concurrents à la même adresse mémoire dont l'une est une écriture (exemple : $x = 1;$ est une écriture), alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
-Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), c'est à dire une exécution sans data race, qui permettent d'assurer le comportement séquentiellement consistant d'un programme. De nombreux travaux sur la vérification de ce type de programme tenant compte du modèle mémoire faible ont été réalisés.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), c'est à dire une exécution sans data race, qui permettent d'assurer le comportement séquentiellement consistant d'un programme\cite{Owens:2010:RIC:1883978.1884011}. De nombreux travaux sur la vérification de ce type de programme tenant compte du modèle mémoire faible ont été réalisés\cite{Turon:2014:GNW:2714064.2660243}.
 
 C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai comprendre et employer le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé à ce langage afin de formaliser un ou plusieurs modèles mémoire faibles et ensuite utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible. 
   
@@ -103,7 +105,7 @@ On déduit les résultats suivants avec un modèle mémoire séquentiellement co
 Sur la plupart des processeurs actuels, on peut observer aussi le résultat $r_0 = 0$ et $r_1 = 0$. En effet, ce résultat peut être obtenu en considérant les cœurs du processeur indépendamment car on observe aucune dépendance dans les instructions de chaque cœurs donc une inversion des instructions est possible pour chaque cœurs. Ce type de comportement nécessite l'utilisation de modèle mémoire moins contraint que la consistance séquentielle. On les appelle modèle mémoire faibles \cite{Adve:1996:SMC:619013.620590}. 
 
 Un modèle mémoire faible possède une propriété fondamentale. Si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, c'est à dire deux accès concurrent  à la même adresse mémoire dont l'une est une écriture, alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
-Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisés.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme\cite{Owens:2010:RIC:1883978.1884011}. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisés\cite{Turon:2014:GNW:2714064.2660243}.
 
 C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai comprendre et employer le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé à ce langage afin de formaliser un ou plusieurs modèles mémoire faibles et ensuite utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible. 
 
@@ -116,7 +118,7 @@ Un modèle mémoire intuitif utilisé dans la programmation parallèle est la co
 Ce modèle mémoire n'est pas suffisant pour expliquer le comportement des processeurs actuels. En effet, des résultats ne pouvant pas apparaitre dans le contexte de consistance séquentielle sont pourtant présents. Pour comprendre ce type de comportement, il est nécessaire d'utiliser des modèles mémoire faibles \cite{Adve:1996:SMC:619013.620590} moins contraignant. 
 
 Une propriété fondamentale des modèles mémoire faibles consiste en si aucune exécution séquentiellement consistante d'un programme parallèle ne contient de data race, alors toutes les exécutions de ce programme seront séquentiellement consistantes \cite{Saraswat:2007:TMM:1229428.1229469}.
-Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisés.
+Si la condition précédente est suffisante, elle n'est pas nécessaire. En effet il existe des conditions plus faible que la data race freeness (DRF), qui permettent d'assurer le comportement séquentiellement consistant d'un programme\cite{Owens:2010:RIC:1883978.1884011}. De nombreux travaux sur la vérification de ce type de programmes tenant compte du modèle mémoire faible ont été réalisés\cite{Turon:2014:GNW:2714064.2660243}.
 
 C'est dans ce contexte que mon stage, proposé par Frédéric LOULERGUE, professeur au LIFO\footnotemark[1] à l'Université d'Orléans, intervient. Je devrai comprendre et employer le langage TLA+ \cite{Lamport:2002:SST:579617} et l'environnement associé à ce langage afin de formaliser un ou plusieurs modèles mémoire faibles et ensuite utiliser cette formalisation pour prouver la correction de programmes parallèles dans le contexte d'un modèle mémoire faible. 
  
@@ -135,7 +137,9 @@ Cette nouvelle forme d'architecture pose des problèmes d'adaptation. En effet, 
 \end{itemize}
 L'étude de ces problèmes et de leur résolution à donner naissance aux modèles mémoire faibles.
 
-Un modèle mémoire ressemble au méthode de description d'un langage de programmation par des chercheurs en programmation d'un point de vu sémantique, c'est à dire les résultats que l'on peut obtenir avec des bouts de code du langage. Un modèle mémoire intuitif, dans le contexte du parallélisme, est la consistance séquentielle. Ce modèle mémoire est énoncé par Leslie Lamport en 1979 posant les bases de la programmation parallèle. Ce modèle définit que toutes exécutions du programme multi cœurs se faisait toujours en exécutant les instructions de chaque thread une par une dans l'ordre du programme. Le modèle  consistance séquentielle est modèle très appliquer les développer principalement. Quand celui-ci développe son programme sur plusieurs cœurs, il a tendance à suivre ce modèle. Les modèles mémoire des processeurs actuels sont plus faible que le modèle de consistance séquentielle, comme ceux-ci apportent moins de garanties. En effet, toute séquence d'exécution valide dans le modèle séquentiel est également valide dans un modèle plus faible.
+Un modèle mémoire ressemble au méthode de description d'un langage de programmation par des chercheurs en programmation d'un point de vu sémantique, c'est à dire les résultats que l'on peut obtenir avec des bouts de code du langage. Un modèle mémoire intuitif, dans le contexte du parallélisme, est la consistance séquentielle. Ce modèle mémoire est énoncé par Leslie Lamport en 1979 posant les bases de la programmation parallèle. Ce modèle définit que toutes exécutions du programme multi cœurs se faisait toujours en exécutant les instructions de chaque thread une par une dans l'ordre du programme. Le modèle  consistance séquentielle est un modèle employé intuitivement par les programmeurs \cite{Boehm:2011:YDK:2076796.2088916}. Quand celui-ci développe son programme sur plusieurs cœurs, il a une forte tendance à suivre ce modèle mémoire. Cela s'explique aussi par l'utilisation de langage de programmation permettant d'ignorer la manière dont fonctionne un processeur.  
+
+Les modèles mémoire des processeurs actuels sont plus faible que le modèle de consistance séquentielle, comme ceux-ci apportent moins de garanties. En effet, toute séquence d'exécution valide dans le modèle séquentiel est également valide dans un modèle plus faible.
 
 Une autre raison de l'utilisation des modèles mémoire faibles est la recherche de meilleur performance. En effet, afin d'éviter les data race dans les programmes, des locks sont utilisés pour construire des sections sûr lors de l'exécution. Data race est le nom donné à un accès concurrent, sur même zone mémoire, par deux cœurs différents dont l'un de ces accès est une écriture. Le problème de l'utilisation de ces locks, l'exécution n'est plus parallèle, lorsque d'autres écritures par d'autre cœurs sont nécessaires, durant cette section d'où une perte de performance. L'utilisation des modèles mémoire faibles permettent de vérifier la validité des résultats de certains programmes ayant des data race mais respectant le modèle de la consistance séquentielle donc l'absence d'utilisation de locks dans ces cas permettent un gain de performance.  
 
@@ -152,8 +156,25 @@ La machine abstraite transmet l'idée au niveau du programmeur sur x86-TSO. Le m
 
 \begin{figure}[ht]
 	\begin{center}
-		\includegraphics[scale=0.8]{mach_abst.png}
-		\caption{x86-TSO : machine abstraite}	
+		\begin{tikzpicture}[scale=1.0]
+			\node[draw, minimum height = 1cm, minimum width = 3cm](Ii)at(0,0){Coeur};
+			\node[draw, minimum height = 1cm, minimum width = 3cm](Iii)at(4,0){Coeur};
+			\node[draw, minimum height = 1cm, rotate=90](Wbi)at(0,-3){Buffer écriture};
+			\node[draw, minimum height = 1cm, rotate=90](Wbii)at(4,-3){Buffer écriture};
+			\node[draw, minimum height = 1cm](L)at(-2,-5.5){Lock};
+			\node[draw, minimum width = 7cm](Mp)at(3,-5.5){Mémoire partagée};
+			\draw[->, >=latex](Ii) -- (Wbi);
+			\draw[->, >=latex](Iii) -- (Wbii);
+			\draw[->, >=latex](Wbi) -- (0,-5.2);
+			\draw[->, >=latex](Wbii) -- (4,-5.2);
+			\draw[<->, >=latex](L) -- (-2, -1.1) -- (-0.7,-1.1) -- (-0.7, -0.5);
+			\draw[<->, >=latex](-1.8,-5.0) -- (-1.8,-1.2) -- (3.5, -1.2) -- (3.5, -0.5);
+			\draw[->, >=latex](1.1,-5.15) -- (1.1,-0.5);
+			\draw[->, >=latex](5.3,-5.15) -- (5.3,-0.5);
+			\draw[->, >=latex](0.5,-3) -- (0.8, -3) -- (0.8, -0.5);
+			\draw[->, >=latex](4.5,-3) -- (4.8, -3) -- (4.8, -0.5);
+		\end{tikzpicture}
+		\caption{x86-TSO : machine abstraite à 2 cœurs}
 	\end{center}
 \end{figure}
 
@@ -194,17 +215,49 @@ Il s'agit de tests utilisés afin de valider le modèle mémoire x86-TSO. Ces te
 
 \paragraph{EXEMPLE 1 : STORES ARE NOT REORDERED WITH OTHER STORES.}
 
-	\begin{center}
-		\includegraphics[scale=0.9]{exemple1.png}
-	\end{center}
+\begin{center}
+\[
+\begin{array}{c||c}
+  \begin{array}{l}
+  	\vspace{0.2cm}
+    \text{Proc 0} \hspace{1.0cm}\\
+    \mathtt{MOV \text{ } [x] \leftarrow 1} \\
+    \mathtt{MOV \text{ } [y] \leftarrow 1} \\
+  \end{array}&
+  \begin{array}{l}
+  \vspace{0.2cm}
+   \text{Proc 1} \\
+    \mathtt{MOV \text{ } EAX \leftarrow [y]} \\
+    \mathtt{MOV \text{ } EBX \leftarrow [x]} \\
+  \end{array}
+\end{array}
+\]
+Etat Final rejeté : Proc1:EAX=1$\land$Proc1:EBX=0
+\end{center}
 
 Ce test implique que les écritures par le Proc 0 sont vues dans l'ordre par les lectures du Proc 1 qui s exécute aussi dans l'ordre. x86-TSO interdit l'état final parce que le buffer de Proc 0 est une FIFO et Proc 0 communique avec Proc 1 via seulement la mémoire partagée.
 
 \paragraph{EXEMPLE 2 : STORES ARE NOT REORDERED WITH OLDER LOADS.}
-  
-	\begin{center}
-		\includegraphics[scale=0.9]{exemple2.png}
-    \end{center}
+
+\begin{center}
+\[
+\begin{array}{c||c}
+  \begin{array}{l}
+  	\vspace{0.2cm}
+    \text{Proc 0} \hspace{1.0cm}\\
+    \mathtt{MOV \text{ } EAX \leftarrow [x]} \\
+    \mathtt{MOV \text{ } [y] \leftarrow 1} \\
+  \end{array}&
+  \begin{array}{l}
+  \vspace{0.2cm}
+   \text{Proc 1} \\
+    \mathtt{MOV \text{ } EBX \leftarrow [y]} \\
+    \mathtt{MOV \text{ } [x] \leftarrow 1} \\
+  \end{array}
+\end{array}
+\]
+Etat Final rejeté : Proc0:EAX=1$\land$Proc1:EBX=1
+\end{center}  
 
 x86-TSO interdit l'état final parce que la lecture n'est jamais retardée.
 Beaucoup d'autre tests sont possibles pour vérifier la cohérence du modèle mais ils seraient trop long dans aborder plus dans ce document. Cette spécification n'est pas codé par nos main à l'heure actuelle. Mais le projet de ce stage est de formaliser en TLA+ la spécification précédente et d'effectuer des tests plus précis sur le modèle.
@@ -220,7 +273,7 @@ Pour mieux comprendre le langage, commençons par construire un premier système
 $$ [hr = 11] \rightarrow [hr = 12] \rightarrow [hr = 1] \rightarrow [hr = 2] \rightarrow ...$$
 Une paire successive d'états, tel que $[hr = 1] \rightarrow [hr = 2]$, est nommé un pas.
 Pour spécifier l'horloge, on décrit tous les comportements possibles. Dans notre cas, il faut un prédicat initial pour spécifier les choix possibles de valeur pour $hr$ et la relation pas suivant qui spécifie comment la valeur $hr$ peut évoluer à chaque pas.
-Le prédicat initial est nommé $HCini$ et ce prédicat affirme que la valeur initial de $hr$ est comprise entre 1 et 12. On obtient ainsi la définition suivante :
+Le prédicat initial est nommé $HCini$ et ce prédicat affirme que la valeur initiale de $hr$ est comprise entre 1 et 12. On obtient ainsi la définition suivante :
 
 $$ HCini == hr \in \{1,...,12\}$$
 
@@ -284,7 +337,13 @@ On formalise maintenant l'interface pour transmettre des données entre des appa
 
 \begin{figure}[ht]
 	\begin{center}
-		\includegraphics[scale=0.7]{schema_async.png}
+		\begin{tikzpicture}[scale=1.0]
+			\node[draw, minimum height = 4cm, minimum width = 2.5cm](T)at(0,0){Tranmetteur};
+			\node[draw, minimum height = 4cm, minimum width = 2.5cm](R)at(5,0){Receveur};
+			\draw[->, >=latex](1.3,1) -- node[above] {val} (3.8,1);
+			\draw[->, >=latex](1.3,0.2) -- node[above] {rdy} (3.8,0.2);
+			\draw[->, >=latex](3.75,-1.0) -- node[above] {ack} (1.3,-1.0);
+		\end{tikzpicture}
 		\caption{Schéma du système}	
 	\end{center}
 \end{figure}
@@ -293,9 +352,46 @@ La donnée est envoyée via la variable $val$ et les variables $rdy$ et $ack$ so
 
 \begin{figure}[ht]
 	\begin{center}
-		\includegraphics[scale=0.7]{exemple_async.png}
-		\caption{Exemple d'exécution}	
+		$\begin{bmatrix}
+			val = 94 \\
+			rdy = 0 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 17}
+		\begin{bmatrix}
+			val = 17 \\
+			rdy = 1 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack}
+		\begin{bmatrix}
+			val = 17 \\
+			rdy = 1 \\
+			ack = 1 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 54}
+		$\vspace{0.5cm}
+		$		
+		\begin{bmatrix}
+			val = 54 \\
+			rdy = 0 \\
+			ack = 1 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack}
+		\begin{bmatrix}
+			val = 54 \\
+			rdy = 0 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 42}
+		\begin{bmatrix}
+			val = 42 \\
+			rdy = 1 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack} ...$
 	\end{center}
+	\caption{Exemple d'exécution}
 \end{figure}
 
 Il faut bien comprendre qu'une spécification est une abstraction. Elle décrit la plupart des aspects d'un système et en ignore d'autres. Par exemple, dans la spécification présente,  on ignore un facteur temps présent entre les transitions dans la réalité. Dans notre contexte, on considère les transitions entre les états prennent un temps nul.
@@ -342,11 +438,10 @@ TLA+ possède aussi d'autres outils permettant diverses vérifications d'une sp�
 
 \section{Conclusion}
 
-Si l'on doit résumer cette première partie du stage, on possède une première spécification d'un modèle mémoire faible avec le x86-TSO. On commence à obtenir un début de maitrise du langage TLA+ et de ces outils mais beaucoup de travail reste à faire si je veux pouvoir réaliser une bonne spécification du modèle x86-TSO en TLA+. Si les premiers tests donnent de bons résultats, il sera intéressant d'étudier les modèles mémoire faibles de différentes architectures de processeur tel que ARM ou PowerPC.
+Si l'on doit résumer cette première partie du stage, on possède une première spécification d'un modèle mémoire faible avec le x86-TSO. On commence à obtenir un début de maitrise du langage TLA+ et de ces outils mais beaucoup de travail reste à faire si je veux pouvoir réaliser une bonne spécification du modèle x86-TSO en TLA+. Si les premiers tests donnent de bons résultats, il sera intéressant d'étudier les modèles mémoire faibles de différentes architectures de processeur tel que ARM\cite{Alglave:2009:SPA:1481839.1481842} ou PowerPC.
 
 \clearpage
 
 \bibliographystyle{ieeetr}
 \bibliography{biblio}
-\nocite{Alglave:2009:SPA:1481839.1481842, Owens:2010:RIC:1883978.1884011, PETRI, Saraswat:2007:TMM:1229428.1229469, Sewell:2010:XRU:1785414.1785443, Turon:2014:GNW:2714064.2660243, Boehm:2011:YDK:2076796.2088916}
 \end{document}
