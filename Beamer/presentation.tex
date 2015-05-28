@@ -6,11 +6,20 @@
 \usepackage{graphicx}
 \usepackage[french]{babel}
 \usepackage{listings}
-\usepackage{hyperref}
-\usepackage{fourier-orns}
 \usepackage{color}
+\usepackage{pgf, tikz}
+\usepackage{mathtools}
 
-\title{Préparation au stage recherche \\ Formalisation en TLA+ de programmes parallèles avec modèles mémoire faibles}
+\usetheme{Warsaw}
+
+\AtBeginSection[]{
+  \begin{frame}{Plan}
+  \small \tableofcontents[currentsection, hideothersubsections]
+  \end{frame} 
+}
+
+\title{Préparation au stage recherche}
+\subtitle{Formalisation en TLA+ de programmes parallèles \\avec modèles mémoire faibles}
 \author{Joris RUBAGOTTI}
 \date{Avril 2015}
 
@@ -18,8 +27,279 @@
 
 \begin{frame}
 
+\begin{minipage}[c]{.46\linewidth}
+     \begin{center}
+             \includegraphics[scale=0.08]{Logo2.png}
+         \end{center}
+   \end{minipage} \hfill
+   \begin{minipage}[c]{.46\linewidth}
+    \begin{center}
+            \includegraphics[scale=0.08]{Logo1.jpg}
+        \end{center}
+ \end{minipage}
+
 \maketitle
 
 \end{frame}
- 
+
+\section{Introduction}
+\begin{frame}{Introduction}
+	\begin{itemize}
+    	\item Évolution des processeurs vers des architectures multi-cœurs
+    	\item Sémantique des processeurs plus complexes, principalement sur le comportement de la mémoire)
+    	\item Utilisation de modèles mémoire faibles.
+    	\item Data Race freeness non nécessaire.
+    \end{itemize}
+\end{frame}
+
+\section{Les modèles mémoire faibles}
+\begin{frame}{Contexte}
+	\begin{itemize}
+	\item Expliquer le comportement et les résultats en programmation parallèle
+	\item Mieux comprendre le fonctionnement des processeurs
+	\item Obtenir de meilleur performance en programmation parallèle
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Un modèle mémoire des processeurs x86}
+	\begin{itemize}
+	\item Modèle mémoire nommé X86-TSO
+	\item Proposé pour compenser le manque de compréhension de la documentation des constructeurs de processeurs
+	\item Composé d'une machine abstraite avec des buffers de stockage
+	\item Et d'un modèle axiomatique définissant la validité des exécutions selon l'ordre dans la mémoire
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{x86-TSO : machine abstraite à 2 cœurs}
+	\begin{center}
+		\begin{tikzpicture}[scale=1.0]
+			\node[draw, minimum height = 1cm, minimum width = 3cm](Ii)at(0,0){Coeur};
+			\node[draw, minimum height = 1cm, minimum width = 3cm](Iii)at(4,0){Coeur};
+			\node[draw, minimum height = 1cm, rotate=90](Wbi)at(0,-3){Buffer écriture};
+			\node[draw, minimum height = 1cm, rotate=90](Wbii)at(4,-3){Buffer écriture};
+			\node[draw, minimum height = 1cm](L)at(-2,-5.5){Lock};
+			\node[draw, minimum width = 7cm](Mp)at(3,-5.5){Mémoire partagée};
+			\draw[->, >=latex](Ii) -- (Wbi);
+			\draw[->, >=latex](Iii) -- (Wbii);
+			\draw[->, >=latex](Wbi) -- (0,-5.2);
+			\draw[->, >=latex](Wbii) -- (4,-5.2);
+			\draw[<->, >=latex](L) -- (-2, -1.1) -- (-0.7,-1.1) -- (-0.7, -0.5);
+			\draw[<->, >=latex](-1.8,-5.0) -- (-1.8,-1.2) -- (3.5, -1.2) -- (3.5, -0.5);
+			\draw[->, >=latex](1.1,-5.15) -- (1.1,-0.5);
+			\draw[->, >=latex](5.3,-5.15) -- (5.3,-0.5);
+			\draw[->, >=latex](0.5,-3) -- (0.8, -3) -- (0.8, -0.5);
+			\draw[->, >=latex](4.5,-3) -- (4.8, -3) -- (4.8, -0.5);
+		\end{tikzpicture}
+	\end{center}
+\end{frame}
+
+\begin{frame}{Comportement de stockage}
+\begin{itemize}
+	\item Le buffer de stockage est une FIFO (First In First Out) et un thread en lecture doit lire l'écriture la plus récente du buffer, si il y en a une, à cette adresse; Autrement les lectures se font au niveau de la mémoire partagée.
+	\item L'instruction MFENCE vide le buffer de stockage du thread.
+	\item Pour exécuter une instruction LOCK'd, un thread doit obtenir le lock global dans un premier temps. A la fin de l'instruction, il vide le buffer de stockage et libère le lock. Tant qu'un lock est tenu par un thread, les autres threads ne peuvent pas lire. 
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Interaction possible}
+\begin{itemize}
+	\item $W_p[a]=u$, pour une valeur écrit $u$ à l'adresse $a$ par le thread $p$	
+	\item $R_p[a]=u$, pour une valeur lu $u$ à l'adresse $a$ par le thread $p$
+	\item $F_p$ , pour une barrière de mémoire MFENCE par le thread $p$
+	\item $L_p$ , au début de l'instruction LOCK'd par le thread $p$
+	\item $U_p$ , à la fin de l'instruction LOCK'd par le thread $p$
+	\item $\tau_p$ , pour une action interne du sous-système de stockage, propage l'écriture du buffer de stockage de $p$ vers la mémoire partagée.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Spécification}
+\begin{itemize}
+	\item $R_p[a] = u$ : $p$ peut lire $u$ de la mémoire à l'adresse $a$ si $p$ n'est pas bloqué, si aucune écriture de $a$ soit présente dans le buffer de $p$ et la mémoire contient déjà $v$ à l'adresse $a$
+	\item $R_p[a] = u$ : $p$ peut lire $u$ du buffer de l'adresse $a$ si $p$ n'est pas bloqué et a $u$ comme une nouvelle écriture vers $a$ dans son buffer.
+	\item $W_p[a] = u$ : $p$ peut écrire $u$ dans son buffer pour l'adresse $a$ quand il le souhaite.
+\end{itemize}
+
+\end{frame}
+\begin{frame}{Spécification (suite)}
+	
+\begin{itemize}
+	\item $\tau_p$ : si $p$ n'est pas bloqué, il peut sortir la plus vielle valeur d'écriture de son buffer et placer la valeur en mémoire à l'adresse donnée, sans coordination avec les autres cœurs.
+	\item $F_p$ : si le buffer de $p$ est vide, il peut alors exécuter MFENCE.
+	\item $L_p$ : si lock n'est pas en attente, l'instruction LOCK'd peut commencer.
+	\item $U_p$ : si $p$ a le lock, et son buffer est vide, il peut mettre fin à l'instruction LOCK'd.
+\end{itemize}
+\end{frame}
+
+\section{Le langage TLA+}
+
+\subsection{Introduction au langage}
+
+\begin{frame}
+	\begin{block}{TLA+}
+		\begin{itemize}
+			\item Un langage de spécification et de preuve
+			\item Basé sur la logique temporelle
+			\item Utilise la logique du premier ordre et la théorie des ensembles pour décrire un ensemble d'états et les possibles transitions
+		\end{itemize}
+	\end{block}
+	\begin{block}{Un exemple : HourClock}
+		\begin{itemize}
+			\item Horloge affichant que l'heure
+			\item $ [hr = 11] \rightarrow [hr = 12] \rightarrow [hr = 1] \rightarrow [hr = 2] \rightarrow ...$
+			\item $[hr = 11]$ : un état
+			\item $[hr = 11] \rightarrow [hr = 12]$ : transition nommée un pas
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Module HourClock}
+\begin{lstlisting}[frame=single, basicstyle=\scriptsize]
+-------------------- MODULE HourClock ----------------------
+EXTENDS Naturals
+VARIABLE hr
+------------------------------------------------------------
+HCini == hr \in (1 .. 12)
+HCnxt == hr' = IF hr # 12 THEN hr + 1 ELSE 1
+HC == HCini /\ [][HCnxt]_hr
+------------------------------------------------------------
+THEOREM HC => []HCini
+
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Analyse du code}
+	\begin{block}{Initialisation}
+		\begin{itemize}
+			\item EXTENDS permet d'importer des modules de TLA+
+			\item VARIABLE créer une variable
+		\end{itemize}	
+	\end{block}		
+	\begin{block}{Prédicats}
+		\begin{itemize}
+			\item HCini est un prédicat qui défini l'état initial
+			\item HCnxt est une formule exprimant la relation de transition
+			\item HC est une formule donnant la spécification
+		\end{itemize}	
+	\end{block}
+	\begin{block}{Théorème}
+		\begin{itemize}
+			\item THEOREM déclare une formule toujours vrai pour la spécification créée.
+		\end{itemize}	
+	\end{block}			
+\end{frame}
+
+\subsection{An Asynchronous Interface}
+\begin{frame}{Schéma et exemple du système}
+\scriptsize
+\begin{columns}[c]
+	\begin{column}[T]{4cm}
+     \begin{center}
+		\begin{tikzpicture}[scale=1.0]
+			\node[draw, minimum height = 3cm, minimum width = 1.0cm](T)at(0,0){Trs};
+			\node[draw, minimum height = 3cm, minimum width = 1.0cm](R)at(2.5,0){Rcv};
+			\draw[->, >=latex](0.5,1) -- node[above] {val} (2.0,1);
+			\draw[->, >=latex](0.5,0.2) -- node[above] {rdy} (2.0,0.2);
+			\draw[->, >=latex](2.0,-1.0) -- node[above] {ack} (0.5,-1.0);
+		\end{tikzpicture}
+         \end{center}
+\end{column}
+\begin{column}[T]{7cm}
+    \begin{center}
+        $\begin{bmatrix}
+			val = 94 \\
+			rdy = 0 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 17}
+		\begin{bmatrix}
+			val = 17 \\
+			rdy = 1 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack}
+		$\vspace{0.2cm}
+		$
+		\begin{bmatrix}
+			val = 17 \\
+			rdy = 1 \\
+			ack = 1 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 54}		
+		\begin{bmatrix}
+			val = 54 \\
+			rdy = 0 \\
+			ack = 1 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack}
+		$\vspace{0.2cm}
+		$
+		\begin{bmatrix}
+			val = 54 \\
+			rdy = 0 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } 42}
+		\begin{bmatrix}
+			val = 42 \\
+			rdy = 1 \\
+			ack = 0 
+		\end{bmatrix}
+		\xrightarrow{Send \text{ } ack}$
+        \end{center}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Module AsynchInterface en TLA+}
+\begin{lstlisting}[frame=single, basicstyle=\scriptsize]
+------------------ MODULE AsynchInterface ------------------
+EXTENDS Naturals
+CONSTANT Data
+VARIABLE chan
+TypeInvariant == chan \in [val:Data, rdy:{0,1}, ack:{0,1}]
+------------------------------------------------------------
+Init == /\ TypeInvariant
+        /\ chan.ack = chan.rdy
+        
+Send(d) == /\ chan.rdy = chan.ack
+           /\ chan' = [chan EXCEPT !.val = d, !.rdy = 1 -@]
+           
+Rcv == /\ chan.rdy # chan.ack
+       /\ chan' = [chan EXCEPT !.ack = 1 - @]
+
+Next == (\E d \in Data : Send(d)) \/ Rcv
+Spec == Init /\ [][Next]_chan
+------------------------------------------------------------
+THEOREM Spec => []TypeInvariant       
+
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Analyse du code}
+	\begin{block}{Initialisation}
+		\begin{itemize}
+			\item $CONSTANT$ déclare un paramètre pour la spécification
+			\item $TypeInvariant$ défini la variable $chan$ comme un tuple de 3 éléments ($val$, $rdy$, $ack$)
+		\end{itemize}	
+	\end{block}		
+	\begin{block}{Prédicats}
+		\begin{itemize}
+			\item $Init$ est un prédicat qui défini l'état initial
+			\item $Send(d)$ et $Rcv$ sont des formules exprimant des relations de transition
+			\item $Spec$ est une formule donnant la spécification
+		\end{itemize}	
+	\end{block}		
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}{Conclusion}
+	\begin{itemize}
+		\item Un premier modèle mémoire avec le x86-TSO
+		\item Approfondir les connaissances sur le langage TLA+ ainsi que des outils disponibles avec le langages tel que TLA+ Proof System.
+	\end{itemize}
+\end{frame}
+
+
+
 \end{document}
