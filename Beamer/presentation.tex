@@ -21,7 +21,7 @@
 \title{Préparation au stage recherche}
 \subtitle{Formalisation en TLA+ de programmes parallèles \\avec modèles mémoire faibles}
 \author{Joris RUBAGOTTI}
-\date{Avril 2015}
+\date{Mai 2015}
 
 \begin{document}
 
@@ -48,22 +48,22 @@
     	\item Évolution des processeurs vers des architectures multi-cœurs
     	\item Sémantique des processeurs plus complexes, principalement sur le comportement de la mémoire)
     	\item Utilisation de modèles mémoire faibles.
-    	\item Data Race freeness non nécessaire.
+    	\item Data Race freeness : une propriété non nécessaire.
     \end{itemize}
 \end{frame}
 
 \section{Les modèles mémoire faibles}
 \begin{frame}{Contexte}
 	\begin{itemize}
-	\item Expliquer le comportement et les résultats en programmation parallèle
 	\item Mieux comprendre le fonctionnement des processeurs
-	\item Obtenir de meilleur performance en programmation parallèle
+	\item Expliquer le comportement et les résultats des programmes exécutés sur plusieurs cœurs
+	\item Gagner des performances sur temps d'exécution de programmes parallèles
 	\end{itemize}
 \end{frame}
 
 \begin{frame}{Un modèle mémoire des processeurs x86}
 	\begin{itemize}
-	\item Modèle mémoire nommé X86-TSO
+	\item Modèle mémoire nommé x86-TSO
 	\item Proposé pour compenser le manque de compréhension de la documentation des constructeurs de processeurs
 	\item Composé d'une machine abstraite avec des buffers de stockage
 	\item Et d'un modèle axiomatique définissant la validité des exécutions selon l'ordre dans la mémoire
@@ -93,41 +93,41 @@
 	\end{center}
 \end{frame}
 
-\begin{frame}{Comportement de stockage}
+\begin{frame}{x86-TSO : Comportement de stockage}
 \begin{itemize}
-	\item Le buffer de stockage est une FIFO (First In First Out) et un thread en lecture doit lire l'écriture la plus récente du buffer, si il y en a une, à cette adresse; Autrement les lectures se font au niveau de la mémoire partagée.
-	\item L'instruction MFENCE vide le buffer de stockage du thread.
-	\item Pour exécuter une instruction LOCK'd, un thread doit obtenir le lock global dans un premier temps. A la fin de l'instruction, il vide le buffer de stockage et libère le lock. Tant qu'un lock est tenu par un thread, les autres threads ne peuvent pas lire. 
+	\item Le buffer de stockage est une FIFO (First In First Out). Un thread en lecture doit lire l'écriture la plus récente du buffer, si il y en a une, à cette adresse. Autrement les lectures se font au niveau de la mémoire partagée.
+	\item L'instruction $MFENCE$ vide le buffer de stockage du thread.
+	\item Pour exécuter une instruction $LOCK'd$, un thread doit obtenir le lock global dans un premier temps. A la fin de l'instruction, il vide le buffer de stockage et libère le lock. Tant qu'un lock est tenu par un thread, les autres threads ne peuvent pas lire. 
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Interaction possible}
+\begin{frame}{x86-TSO : Interaction possible}
 \begin{itemize}
-	\item $W_p[a]=u$, pour une valeur écrit $u$ à l'adresse $a$ par le thread $p$	
+	\item $W_p[a]=u$, pour une valeur écrit $u$ à l'adresse $a$ par \\s le thread $p$	
 	\item $R_p[a]=u$, pour une valeur lu $u$ à l'adresse $a$ par le thread $p$
-	\item $F_p$ , pour une barrière de mémoire MFENCE par le thread $p$
-	\item $L_p$ , au début de l'instruction LOCK'd par le thread $p$
-	\item $U_p$ , à la fin de l'instruction LOCK'd par le thread $p$
+	\item $F_p$ , pour une barrière de mémoire $MFENCE$ par le thread $p$
+	\item $L_p$ , au début de l'instruction $LOCK'd$ par le thread $p$
+	\item $U_p$ , à la fin de l'instruction $LOCK'd$ par le thread $p$
 	\item $\tau_p$ , pour une action interne du sous-système de stockage, propage l'écriture du buffer de stockage de $p$ vers la mémoire partagée.
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{Spécification}
+\begin{frame}{x86-TSO : Spécification}
 \begin{itemize}
 	\item $R_p[a] = u$ : $p$ peut lire $u$ de la mémoire à l'adresse $a$ si $p$ n'est pas bloqué, si aucune écriture de $a$ soit présente dans le buffer de $p$ et la mémoire contient déjà $v$ à l'adresse $a$
-	\item $R_p[a] = u$ : $p$ peut lire $u$ du buffer de l'adresse $a$ si $p$ n'est pas bloqué et a $u$ comme une nouvelle écriture vers $a$ dans son buffer.
+	\item $R_p[a] = u$ : $p$ peut lire $u$ du buffer de l'adresse $a$ si $p$ n'est pas bloqué et possède $u$ comme une nouvelle écriture vers $a$ dans son buffer.
 	\item $W_p[a] = u$ : $p$ peut écrire $u$ dans son buffer pour l'adresse $a$ quand il le souhaite.
 \end{itemize}
 
 \end{frame}
-\begin{frame}{Spécification (suite)}
+\begin{frame}{x86-TSO : Spécification (suite)}
 	
 \begin{itemize}
 	\item $\tau_p$ : si $p$ n'est pas bloqué, il peut sortir la plus vielle valeur d'écriture de son buffer et placer la valeur en mémoire à l'adresse donnée, sans coordination avec les autres cœurs.
-	\item $F_p$ : si le buffer de $p$ est vide, il peut alors exécuter MFENCE.
-	\item $L_p$ : si lock n'est pas en attente, l'instruction LOCK'd peut commencer.
-	\item $U_p$ : si $p$ a le lock, et son buffer est vide, il peut mettre fin à l'instruction LOCK'd.
+	\item $F_p$ : si le buffer de $p$ est vide, il peut alors exécuter $MFENCE$.
+	\item $L_p$ : si lock n'est pas en attente, l'instruction $LOCK'd$ peut commencer.
+	\item $U_p$ : si $p$ a le lock, et son buffer est vide, il peut mettre fin à l'instruction $LOCK'd$.
 \end{itemize}
 \end{frame}
 
@@ -148,7 +148,7 @@
 			\item Horloge affichant que l'heure
 			\item $ [hr = 11] \rightarrow [hr = 12] \rightarrow [hr = 1] \rightarrow [hr = 2] \rightarrow ...$
 			\item $[hr = 11]$ : un état
-			\item $[hr = 11] \rightarrow [hr = 12]$ : transition nommée un pas
+			\item $[hr = 11] \rightarrow [hr = 12]$ : transition nommée un $pas$
 		\end{itemize}
 	\end{block}
 \end{frame}
@@ -171,20 +171,20 @@ THEOREM HC => []HCini
 \begin{frame}{Analyse du code}
 	\begin{block}{Initialisation}
 		\begin{itemize}
-			\item EXTENDS permet d'importer des modules de TLA+
-			\item VARIABLE créer une variable
+			\item $EXTENDS$ permet d'importer des modules de TLA+
+			\item $VARIABLE$ créer une variable
 		\end{itemize}	
 	\end{block}		
 	\begin{block}{Prédicats}
 		\begin{itemize}
-			\item HCini est un prédicat qui défini l'état initial
-			\item HCnxt est une formule exprimant la relation de transition
-			\item HC est une formule donnant la spécification
+			\item $HCini$ est un prédicat qui défini l'état initial
+			\item $HCnxt$ est une formule exprimant la relation de transition
+			\item $HC$ est une formule donnant la spécification
 		\end{itemize}	
 	\end{block}
 	\begin{block}{Théorème}
 		\begin{itemize}
-			\item THEOREM déclare une formule toujours vrai pour la spécification créée.
+			\item $THEOREM$ déclare une formule toujours vrai pour la spécification créée.
 		\end{itemize}	
 	\end{block}			
 \end{frame}
@@ -296,7 +296,7 @@ THEOREM Spec => []TypeInvariant
 \begin{frame}{Conclusion}
 	\begin{itemize}
 		\item Un premier modèle mémoire avec le x86-TSO
-		\item Approfondir les connaissances sur le langage TLA+ ainsi que des outils disponibles avec le langages tel que TLA+ Proof System.
+		\item Approfondir les connaissances sur le langage TLA+ ainsi que les outils disponibles avec le langages tel que TLA+ Proof System pour la gestion de preuves
 	\end{itemize}
 \end{frame}
 
